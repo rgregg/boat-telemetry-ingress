@@ -6,7 +6,7 @@ class InfluxClient:
     def __init__(self, url: str, token: str, org: str, http: httpx.Client | None = None):
         self.url = url.rstrip("/")
         self.org = org
-        self._http = http or httpx.Client(base_url=self.url, timeout=30.0)
+        self._http = http or httpx.Client(timeout=30.0)
         self._headers = {"Authorization": f"Token {token}"}
 
     def write(self, bucket: str, lp: bytes, gzipped: bool = False) -> None:
@@ -36,9 +36,9 @@ class InfluxClient:
     def health(self) -> bool:
         try:
             r = self._http.get(f"{self.url}/health")
-        except httpx.HTTPError:
+            return r.status_code == 200 and r.json().get("status") == "pass"
+        except (httpx.HTTPError, ValueError):
             return False
-        return r.status_code == 200 and r.json().get("status") == "pass"
 
 def _last_time_from_csv(text: str) -> datetime | None:
     time_col = None

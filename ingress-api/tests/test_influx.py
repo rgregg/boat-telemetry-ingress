@@ -20,7 +20,7 @@ def test_write_posts_lp_to_bucket():
 def test_write_raises_on_error_status():
     ic = InfluxClient("http://influx:8086", "tok", "org",
                       http=_client(lambda r: httpx.Response(500, text="boom")))
-    with pytest.raises(Exception):
+    with pytest.raises(httpx.HTTPStatusError):
         ic.write("b", b"x f=1 1")
 
 def test_highwater_parses_latest_time():
@@ -46,3 +46,28 @@ def test_health_false_on_failure():
     ic = InfluxClient("http://influx:8086", "tok", "org",
                       http=_client(lambda r: httpx.Response(503)))
     assert ic.health() is False
+
+def test_write_sends_gzip_encoding_when_flagged():
+    seen = {}
+    def handler(req):
+        seen["enc"] = req.headers.get("content-encoding")
+        return httpx.Response(204)
+    ic = InfluxClient("http://influx:8086", "tok", "org", http=_client(handler))
+    ic.write("b", b"x f=1 1", gzipped=True)
+    assert seen["enc"] == "gzip"
+
+def test_health_false_when_status_is_fail():
+    ic = InfluxClient("http://influx:8086", "tok", "org",
+                      http=_client(lambda r: httpx.Response(200, json={"status": "fail"})))
+    assert ic.health() is False
+
+def test_health_false_on_non_json_body():
+    ic = InfluxClient("http://influx:8086", "tok", "org",
+                      http=_client(lambda r: httpx.Response(200, text="OK")))
+    assert ic.health() is False
+
+def test_highwater_raises_on_error_status():
+    ic = InfluxClient("http://influx:8086", "tok", "org",
+                      http=_client(lambda r: httpx.Response(500)))
+    with pytest.raises(httpx.HTTPStatusError):
+        ic.highwater("b")
