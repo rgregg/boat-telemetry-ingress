@@ -60,9 +60,10 @@ Two components, both built from this repo:
   `INFLUXDB_ORG`) via environment.
 - **Source registry** (data-driven, see below) maps `source_id` →
   `{api_key hash, bucket, default tags}`.
-- **Runs on the home host that has both tailnet reachability and InfluxDB
-  access** (the InfluxDB VM). Its real address/token are deployment config, not
-  in this repo.
+- **Location-independent.** Because it's a container whose only dependencies
+  are `INFLUXDB_URL` + token (via env) and network reachability to InfluxDB and
+  the tailnet, it can run on any host — it does not need to be co-located with
+  InfluxDB. Its real address/token are deployment config, not in this repo.
 
 #### Endpoints
 
@@ -171,7 +172,8 @@ Real bucket names, tag values, and keys live only in the untracked
 ## Deployment & cutover
 
 - **Home:** `boat-ingress-api/` (Dockerfile + compose + app) deployed as a
-  Komodo stack on the InfluxDB host.
+  Komodo stack on any host that can reach InfluxDB and the tailnet (it is not
+  tied to the InfluxDB host).
 - **Site:** `boat-sync-agent/` (Dockerfile + compose + app), a per-site compose
   stack alongside Signal K.
 - **Cutover (parallel-run, then retire old):**
