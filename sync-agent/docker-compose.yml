@@ -1,0 +1,21 @@
+services:
+  sync-agent:
+    build: .
+    container_name: boat-sync-agent
+    restart: unless-stopped
+    environment:
+      - API_URL=${API_URL}
+      - API_KEY=${API_KEY}
+      - LOCAL_INFLUX_URL=${LOCAL_INFLUX_URL:-http://localhost:8086}
+      - LOCAL_INFLUX_TOKEN=${LOCAL_INFLUX_TOKEN}
+      - LOCAL_INFLUX_ORG=${LOCAL_INFLUX_ORG}
+      - LOCAL_INFLUX_BUCKET=${LOCAL_INFLUX_BUCKET}
+      - POLL_INTERVAL=${POLL_INTERVAL:-60}
+      - WINDOW_SECONDS=${WINDOW_SECONDS:-21600}
+      - OVERLAP_SECONDS=${OVERLAP_SECONDS:-600}
+      - BACKFILL_FLOOR=${BACKFILL_FLOOR:--30d}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
