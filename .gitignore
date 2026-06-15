@@ -12,6 +12,7 @@ secrets/
 __pycache__/
 *.py[cod]
 .venv/
+.venv-e2e/
 venv/
 *.egg-info/
 .pytest_cache/

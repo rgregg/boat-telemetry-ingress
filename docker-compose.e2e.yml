@@ -1,0 +1,45 @@
+# Two InfluxDBs (source = the "boat", dest = "home") + the API + the agent.
+services:
+  influx-src:
+    image: influxdb:2.7
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ci
+      DOCKER_INFLUXDB_INIT_PASSWORD: ci-password
+      DOCKER_INFLUXDB_INIT_ORG: boat
+      DOCKER_INFLUXDB_INIT_BUCKET: signalk
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: src-token
+    ports: ["8186:8086"]
+  influx-dst:
+    image: influxdb:2.7
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ci
+      DOCKER_INFLUXDB_INIT_PASSWORD: ci-password
+      DOCKER_INFLUXDB_INIT_ORG: smart_home
+      DOCKER_INFLUXDB_INIT_BUCKET: site_a
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: dst-token
+    ports: ["8286:8086"]
+  api:
+    build: ./ingress-api
+    depends_on: [influx-dst]
+    environment:
+      INFLUXDB_URL: http://influx-dst:8086
+      INFLUXDB_TOKEN: dst-token
+      INFLUXDB_ORG: smart_home
+      SOURCES_FILE: /config/sources.yaml
+    volumes:
+      - ./tests/e2e/sources.e2e.yaml:/config/sources.yaml:ro
+    ports: ["8099:8080"]
+  agent:
+    build: ./sync-agent
+    depends_on: [api, influx-src]
+    environment:
+      API_URL: http://api:8080
+      API_KEY: e2e-key
+      LOCAL_INFLUX_URL: http://influx-src:8086
+      LOCAL_INFLUX_TOKEN: src-token
+      LOCAL_INFLUX_ORG: boat
+      LOCAL_INFLUX_BUCKET: signalk
+      POLL_INTERVAL: "5"
+      BACKFILL_FLOOR: "-1h"

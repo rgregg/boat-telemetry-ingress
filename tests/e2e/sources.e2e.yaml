@@ -1,0 +1,6 @@
+# key_sha256 = sha256('e2e-key')
+sources:
+  site-a:
+    bucket: site_a
+    tags: { source: site_a }
+    key_sha256: "a781b3e13d2b80957d1b925804148f666cc87adb35c1481686a9687f27f8d8a0"
