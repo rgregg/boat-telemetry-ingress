@@ -31,3 +31,19 @@ def test_highwater_returns_iso_or_null(client, fake_influx):
 def test_health_ok(client):
     r = client.get("/health")
     assert r.status_code == 200 and r.json()["influxdb"] is True
+
+def test_ingest_gzip_body(client, fake_influx):
+    import gzip
+    body = gzip.compress(b"cpu load=1 100")
+    r = client.post("/v1/ingest", content=body, headers={**H, "Content-Encoding": "gzip"})
+    assert r.status_code == 200
+    bucket, lp, _ = fake_influx.writes[0]
+    assert lp == b"cpu,source=site_a load=1 100"
+
+def test_ingest_malformed_gzip_returns_400(client):
+    r = client.post("/v1/ingest", content=b"not-gzip", headers={**H, "Content-Encoding": "gzip"})
+    assert r.status_code == 400
+
+def test_ingest_non_utf8_body_returns_400(client):
+    r = client.post("/v1/ingest", content=b"\xff\xfe", headers=H)
+    assert r.status_code == 400

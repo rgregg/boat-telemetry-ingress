@@ -1,7 +1,6 @@
 import hashlib, textwrap, pytest
 from fastapi.testclient import TestClient
 from app.main import create_app
-from app import main as main_mod
 
 def _sha(k): return hashlib.sha256(k.encode()).hexdigest()
 

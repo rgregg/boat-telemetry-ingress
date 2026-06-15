@@ -1,5 +1,6 @@
 import gzip
 from fastapi import FastAPI, Request, Header, HTTPException, Depends
+from fastapi.concurrency import run_in_threadpool
 from app.config import load_settings
 from app.registry import load_registry, Source
 from app.influx import InfluxClient
@@ -24,13 +25,21 @@ def create_app(influx: InfluxClient | None = None) -> FastAPI:
     async def ingest(request: Request, src: Source = Depends(auth)):
         body = await request.body()
         if request.headers.get("content-encoding", "").lower() == "gzip":
-            body = gzip.decompress(body)
-        text = body.decode("utf-8", errors="strict").strip()
+            # Tailnet-only + authenticated callers, so an unbounded decompression
+            # (gzip-bomb) is an accepted risk; no size cap here.
+            try:
+                body = gzip.decompress(body)
+            except (gzip.BadGzipFile, EOFError, OSError) as exc:
+                raise HTTPException(status_code=400, detail="invalid gzip body") from exc
+        try:
+            text = body.decode("utf-8", errors="strict").strip()
+        except UnicodeDecodeError as exc:
+            raise HTTPException(status_code=400, detail="body must be utf-8") from exc
         if not text:
             raise HTTPException(status_code=400, detail="empty body")
         lp = inject_tags_into_lp(text, src.tags).encode("utf-8")
         try:
-            influx.write(src.bucket, lp)
+            await run_in_threadpool(influx.write, src.bucket, lp)
         except Exception:
             raise HTTPException(status_code=502, detail="influxdb write failed")
         return {"written": True}
