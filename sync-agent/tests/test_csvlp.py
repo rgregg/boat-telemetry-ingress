@@ -35,3 +35,27 @@ def test_boolean_field():
 def test_empty_result_yields_empty_string():
     assert annotated_csv_to_lp("\r\n") == ""
     assert annotated_csv_to_lp("") == ""
+
+def test_fractional_second_timestamp_is_exact():
+    csv = (
+        "#datatype,string,long,dateTime:RFC3339,dateTime:RFC3339,dateTime:RFC3339,double,string,string\r\n"
+        ",result,table,_start,_stop,_time,_value,_field,_measurement\r\n"
+        ",_result,0,,,2026-06-14T18:40:00.500000Z,1.5,load,cpu\r\n"
+    )
+    assert annotated_csv_to_lp(csv) == "cpu load=1.5 1781462400500000000"
+
+def test_field_key_with_space_is_escaped():
+    csv = (
+        "#datatype,string,long,dateTime:RFC3339,dateTime:RFC3339,dateTime:RFC3339,double,string,string\r\n"
+        ",result,table,_start,_stop,_time,_value,_field,_measurement\r\n"
+        ",_result,0,,,2026-06-14T18:40:00Z,1.5,mean value,cpu\r\n"
+    )
+    assert annotated_csv_to_lp(csv) == r"cpu mean\ value=1.5 1781462400000000000"
+
+def test_empty_value_row_is_skipped():
+    csv = (
+        "#datatype,string,long,dateTime:RFC3339,dateTime:RFC3339,dateTime:RFC3339,double,string,string\r\n"
+        ",result,table,_start,_stop,_time,_value,_field,_measurement\r\n"
+        ",_result,0,,,2026-06-14T18:40:00Z,,load,cpu\r\n"
+    )
+    assert annotated_csv_to_lp(csv) == ""
