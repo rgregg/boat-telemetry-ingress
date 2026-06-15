@@ -30,7 +30,9 @@ services:
       SOURCES_FILE: /config/sources.yaml
     volumes:
       - ./tests/e2e/sources.e2e.yaml:/config/sources.yaml:ro
-    ports: ["8099:8080"]
+    # No host port mapping needed: the agent reaches the API over the internal
+    # Docker network (http://api:8080), and the test only uses the InfluxDB host
+    # ports. Omitting this avoids host port clashes on dev/CI machines.
   agent:
     build: ./sync-agent
     depends_on: [api, influx-src]
