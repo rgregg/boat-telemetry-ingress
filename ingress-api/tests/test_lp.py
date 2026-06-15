@@ -24,3 +24,15 @@ def test_inject_multiple_lines_and_skips_blank():
 
 def test_inject_no_tags_is_passthrough():
     assert inject_tags_into_lp("a f=1 1", {}) == "a f=1 1"
+
+def test_inject_escapes_equals_in_tag_value():
+    out = inject_tags_into_lp("m f=1 1", {"k": "a=b"})
+    assert out == r"m,k=a\=b f=1 1"
+
+def test_inject_multiple_default_tags():
+    out = inject_tags_into_lp("m f=1 1", {"src": "a", "env": "prod"})
+    assert out == "m,src=a,env=prod f=1 1"
+
+def test_inject_passes_comment_lines_through_unchanged():
+    out = inject_tags_into_lp("# a comment\ncpu load=1 1", {"source": "site_a"})
+    assert out == "# a comment\ncpu,source=site_a load=1 1"

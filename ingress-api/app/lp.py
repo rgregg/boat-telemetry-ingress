@@ -22,7 +22,12 @@ def _inject_one(line: str, rendered: str) -> str:
 
 def inject_tags_into_lp(lp: str, tags: dict) -> str:
     if not tags:
-        return "\n".join(l for l in lp.splitlines() if l.strip())
+        return "\n".join(line for line in lp.splitlines() if line.strip())
     rendered = "".join(f",{_escape(k)}={_escape(v)}" for k, v in tags.items())
-    out = [_inject_one(l, rendered) for l in lp.splitlines() if l.strip()]
+    out = []
+    for line in lp.splitlines():
+        if not line.strip():
+            continue
+        # LP comment lines (`#`) must not have tags injected — pass through as-is.
+        out.append(line if line.lstrip().startswith("#") else _inject_one(line, rendered))
     return "\n".join(out)
