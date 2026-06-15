@@ -17,6 +17,18 @@ docker compose up -d --build
 - `BACKFILL_FLOOR` (default `-30d`): how far back to start when the API reports no data yet.
 - `POLL_INTERVAL` (default 60s).
 
+## Failure handling
+- **Transient errors** (API unreachable, InfluxDB 5xx, network) — the cycle stops
+  and retries next `POLL_INTERVAL`. The watermark only advances on confirmed
+  writes, so nothing is lost and gaps backfill automatically.
+- **Unwritable data** (the API returns `400` because InfluxDB rejected the
+  payload — malformed line protocol or a field-type conflict) — that window is
+  **logged at ERROR and skipped** rather than retried forever, so one bad point
+  cannot stall all newer telemetry. InfluxDB applies partial writes, so the valid
+  points in the window still land; only the genuinely unwritable points are
+  dropped. Watch the agent logs for `dropping unwritable window` and fix the
+  upstream type conflict if it recurs.
+
 ## Test
 ```bash
 python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt && pytest

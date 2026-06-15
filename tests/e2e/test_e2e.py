@@ -13,7 +13,7 @@ def _count_dst() -> int:
     flux = ('from(bucket:"site_a") |> range(start: 0) '
             '|> filter(fn:(r)=> r.source=="site_a") |> count() '
             '|> keep(columns:["_value"])')
-    r = httpx.post(f"{DST}/api/v2/query", params={"org": "smart_home"},
+    r = httpx.post(f"{DST}/api/v2/query", params={"org": "e2e_org"},
                    headers={"Authorization": "Token dst-token", "Content-Type": "application/vnd.flux",
                             "Accept": "application/csv"}, content=flux)
     r.raise_for_status()

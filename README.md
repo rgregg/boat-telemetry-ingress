@@ -26,8 +26,12 @@ config point.
 
 ## Status
 
-Design phase. See [`docs/specs/`](docs/specs/) for the architecture spec. No
-implementation yet.
+Implemented. Both containers are built and tested (`ingress-api` and
+`sync-agent` unit suites plus a real two-InfluxDB Docker end-to-end test under
+[`tests/e2e/`](tests/e2e/)). See [`docs/specs/`](docs/specs/) for the
+architecture, [`docs/plans/`](docs/plans/) for the build plan, and
+[`docs/runbooks/cutover.md`](docs/runbooks/cutover.md) for migrating a site off
+the legacy pipeline. Not yet deployed.
 
 ## Security note (public repo)
 

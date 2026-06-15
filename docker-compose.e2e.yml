@@ -16,7 +16,7 @@ services:
       DOCKER_INFLUXDB_INIT_MODE: setup
       DOCKER_INFLUXDB_INIT_USERNAME: ci
       DOCKER_INFLUXDB_INIT_PASSWORD: ci-password
-      DOCKER_INFLUXDB_INIT_ORG: smart_home
+      DOCKER_INFLUXDB_INIT_ORG: e2e_org
       DOCKER_INFLUXDB_INIT_BUCKET: site_a
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: dst-token
     ports: ["8286:8086"]
@@ -26,7 +26,7 @@ services:
     environment:
       INFLUXDB_URL: http://influx-dst:8086
       INFLUXDB_TOKEN: dst-token
-      INFLUXDB_ORG: smart_home
+      INFLUXDB_ORG: e2e_org
       SOURCES_FILE: /config/sources.yaml
     volumes:
       - ./tests/e2e/sources.e2e.yaml:/config/sources.yaml:ro

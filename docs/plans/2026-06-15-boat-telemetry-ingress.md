@@ -776,7 +776,7 @@ services:
     environment:
       - INFLUXDB_URL=${INFLUXDB_URL}
       - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
-      - INFLUXDB_ORG=${INFLUXDB_ORG:-smart_home}
+      - INFLUXDB_ORG=${INFLUXDB_ORG:-your-org}
       - SOURCES_FILE=/config/sources.yaml
     volumes:
       - ./sources.yaml:/config/sources.yaml:ro
@@ -805,7 +805,7 @@ sources:
 ```
 INFLUXDB_URL=http://influxdb:8086
 INFLUXDB_TOKEN=
-INFLUXDB_ORG=smart_home
+INFLUXDB_ORG=your-org
 ```
 
 - [ ] **Step 5: Write `ingress-api/README.md`**
@@ -1574,7 +1574,7 @@ services:
       DOCKER_INFLUXDB_INIT_MODE: setup
       DOCKER_INFLUXDB_INIT_USERNAME: ci
       DOCKER_INFLUXDB_INIT_PASSWORD: ci-password
-      DOCKER_INFLUXDB_INIT_ORG: smart_home
+      DOCKER_INFLUXDB_INIT_ORG: e2e_org
       DOCKER_INFLUXDB_INIT_BUCKET: site_a
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: dst-token
     ports: ["8286:8086"]
@@ -1584,7 +1584,7 @@ services:
     environment:
       INFLUXDB_URL: http://influx-dst:8086
       INFLUXDB_TOKEN: dst-token
-      INFLUXDB_ORG: smart_home
+      INFLUXDB_ORG: e2e_org
       SOURCES_FILE: /config/sources.yaml
     volumes:
       - ./tests/e2e/sources.e2e.yaml:/config/sources.yaml:ro
@@ -1641,7 +1641,7 @@ def _count_dst() -> int:
     flux = ('from(bucket:"site_a") |> range(start: 0) '
             '|> filter(fn:(r)=> r.source=="site_a") |> count() '
             '|> keep(columns:["_value"])')
-    r = httpx.post(f"{DST}/api/v2/query", params={"org": "smart_home"},
+    r = httpx.post(f"{DST}/api/v2/query", params={"org": "e2e_org"},
                    headers={"Authorization": "Token dst-token", "Content-Type": "application/vnd.flux",
                             "Accept": "application/csv"}, content=flux)
     r.raise_for_status()

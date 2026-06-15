@@ -69,7 +69,7 @@ Two components, both built from this repo:
 
 | Method & path | Auth | Purpose |
 |---------------|------|---------|
-| `GET /v1/highwater` | Bearer (per-source key) | Returns the latest timestamp the central InfluxDB already holds **for this source** (max `_time` over the source's bucket, filtered by the source's identifying tag). The agent's resume point. |
+| `GET /v1/highwater` | Bearer (per-source key) | Returns the latest timestamp the central InfluxDB already holds **for this source** (max `_time` over the source's bucket — each source maps 1:1 to its own bucket, so no tag filter is needed and pre-existing untagged data is tolerated during cutover). The agent's resume point. |
 | `POST /v1/ingest` | Bearer (per-source key) | Body = InfluxDB line protocol (optionally gzip, `Content-Encoding: gzip`). Validates, applies the source's default tags, writes to the source's bucket. Returns 2xx only after a durable InfluxDB write. |
 | `GET /health` | none | Liveness + central InfluxDB reachability. |
 
