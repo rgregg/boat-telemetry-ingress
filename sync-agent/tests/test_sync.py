@@ -62,3 +62,32 @@ def test_empty_window_is_not_posted():
                     backfill_floor="-30d", now=now)
     assert sent == 0 and api.posts == []
     assert len(local.queries) == 1              # still queried once
+
+def test_zero_window_raises():
+    api = FakeApi(None); local = FakeLocal()
+    with pytest.raises(ValueError, match="window_seconds"):
+        run_once(api, local, window_seconds=0, overlap_seconds=0,
+                 backfill_floor="-1h", now=datetime(2026, 6, 14, 12, 0, tzinfo=UTC))
+
+def test_naive_now_raises():
+    api = FakeApi(None); local = FakeLocal()
+    with pytest.raises(ValueError, match="tz-aware"):
+        run_once(api, local, window_seconds=21600, overlap_seconds=0,
+                 backfill_floor="-1h", now=datetime(2026, 6, 14, 12, 0))
+
+def test_future_highwater_sends_nothing():
+    now = datetime(2026, 6, 14, 12, 0, tzinfo=UTC)
+    api = FakeApi(now + timedelta(hours=1)); local = FakeLocal()
+    sent = run_once(api, local, window_seconds=21600, overlap_seconds=0,
+                    backfill_floor="-30d", now=now)
+    assert sent == 0 and local.queries == []
+
+def test_exact_boundary_single_window():
+    now = datetime(2026, 6, 14, 12, 0, tzinfo=UTC)
+    hw = now - timedelta(hours=6)
+    api = FakeApi(hw); local = FakeLocal()
+    sent = run_once(api, local, window_seconds=21600, overlap_seconds=0,
+                    backfill_floor="-30d", now=now)
+    assert len(local.queries) == 1
+    assert local.queries[0] == (hw, now)
+    assert sent == 1

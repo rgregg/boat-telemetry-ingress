@@ -13,7 +13,12 @@ def _floor_to_dt(floor: str, now: datetime) -> datetime:
 
 def run_once(api, local, *, window_seconds: int, overlap_seconds: int,
              backfill_floor: str, now: datetime | None = None) -> int:
-    now = now or datetime.now(timezone.utc)
+    if window_seconds <= 0:
+        raise ValueError(f"window_seconds must be positive, got {window_seconds}")
+    if now is None:
+        now = datetime.now(timezone.utc)
+    elif now.tzinfo is None:
+        raise ValueError("now must be tz-aware")
     hw = api.get_highwater()
     if hw is None:
         start = _floor_to_dt(backfill_floor, now)
