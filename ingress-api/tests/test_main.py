@@ -47,3 +47,13 @@ def test_ingest_malformed_gzip_returns_400(client):
 def test_ingest_non_utf8_body_returns_400(client):
     r = client.post("/v1/ingest", content=b"\xff\xfe", headers=H)
     assert r.status_code == 400
+
+def test_ingest_influxdb_4xx_returns_400(client, fake_influx):
+    fake_influx.raise_status = 422  # InfluxDB field-type conflict / unparseable
+    r = client.post("/v1/ingest", content=b"cpu f=1 1", headers=H)
+    assert r.status_code == 400
+
+def test_ingest_influxdb_5xx_returns_502(client, fake_influx):
+    fake_influx.raise_status = 503
+    r = client.post("/v1/ingest", content=b"cpu f=1 1", headers=H)
+    assert r.status_code == 502

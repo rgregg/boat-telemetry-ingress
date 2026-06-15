@@ -1,4 +1,5 @@
 import gzip
+import httpx
 from fastapi import FastAPI, Request, Header, HTTPException, Depends
 from fastapi.concurrency import run_in_threadpool
 from app.config import load_settings
@@ -40,6 +41,13 @@ def create_app(influx: InfluxClient | None = None) -> FastAPI:
         lp = inject_tags_into_lp(text, src.tags).encode("utf-8")
         try:
             await run_in_threadpool(influx.write, src.bucket, lp)
+        except httpx.HTTPStatusError as exc:
+            # InfluxDB 4xx = unwritable payload (malformed LP or field-type conflict):
+            # not retryable. Signal 400 so the agent drops this window instead of
+            # retrying it forever and blocking all newer data behind it.
+            if 400 <= exc.response.status_code < 500:
+                raise HTTPException(status_code=400, detail="influxdb rejected payload") from exc
+            raise HTTPException(status_code=502, detail="influxdb write failed") from exc
         except Exception:
             raise HTTPException(status_code=502, detail="influxdb write failed")
         return {"written": True}

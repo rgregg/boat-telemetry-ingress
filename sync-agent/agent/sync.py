@@ -1,6 +1,10 @@
 # sync-agent/agent/sync.py
 import re
+import logging
+import httpx
 from datetime import datetime, timedelta, timezone
+
+log = logging.getLogger(__name__)
 
 _FLOOR_RE = re.compile(r"^-(\d+)([smhdw])$")
 _UNIT = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
@@ -30,7 +34,16 @@ def run_once(api, local, *, window_seconds: int, overlap_seconds: int,
         stop = min(start + window, now)
         lp = local.query_window(start, stop)
         if lp.strip():
-            api.post_ingest(lp.encode("utf-8"))   # raises on failure → caller retries
-            sent += 1
+            try:
+                api.post_ingest(lp.encode("utf-8"))
+                sent += 1
+            except httpx.HTTPStatusError as exc:
+                # 400 = the API/InfluxDB rejected this window as unwritable (not
+                # retryable). Drop it with a loud log so one poison window can't
+                # block all newer data; any other status propagates → caller retries.
+                if exc.response.status_code == 400:
+                    log.error("dropping unwritable window [%s, %s): %s", start, stop, exc)
+                else:
+                    raise
         start = stop
     return sent

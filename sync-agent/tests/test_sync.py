@@ -1,14 +1,24 @@
 # sync-agent/tests/test_sync.py
 from datetime import datetime, timedelta, timezone
 import pytest
+import httpx
 from agent.sync import run_once
 
 UTC = timezone.utc
 
 class FakeApi:
-    def __init__(self, hw): self.hw = hw; self.posts = []; self.fail_after = None
-    def get_highwater(self): return self.hw
+    def __init__(self, hw):
+        self.hw = hw
+        self.posts = []
+        self.fail_after = None
+        self.raise_status = None
+    def get_highwater(self):
+        return self.hw
     def post_ingest(self, lp):
+        if self.raise_status is not None:
+            req = httpx.Request("POST", "http://api/v1/ingest")
+            resp = httpx.Response(self.raise_status, request=req)
+            raise httpx.HTTPStatusError("err", request=req, response=resp)
         if self.fail_after is not None and len(self.posts) >= self.fail_after:
             raise RuntimeError("api down")
         self.posts.append(lp)
@@ -91,3 +101,22 @@ def test_exact_boundary_single_window():
     assert len(local.queries) == 1
     assert local.queries[0] == (hw, now)
     assert sent == 1
+
+def test_poison_window_400_is_skipped_not_raised():
+    now = datetime(2026, 6, 14, 12, 0, tzinfo=UTC)
+    hw = now - timedelta(hours=15)
+    api = FakeApi(hw); api.raise_status = 400
+    local = FakeLocal()
+    sent = run_once(api, local, window_seconds=21600, overlap_seconds=600,
+                    backfill_floor="-30d", now=now)
+    assert sent == 0                 # every window rejected as unwritable
+    assert len(local.queries) == 3   # but the loop progressed through all windows
+
+def test_non_400_http_error_propagates():
+    now = datetime(2026, 6, 14, 12, 0, tzinfo=UTC)
+    hw = now - timedelta(hours=15)
+    api = FakeApi(hw); api.raise_status = 503
+    local = FakeLocal()
+    with pytest.raises(httpx.HTTPStatusError):
+        run_once(api, local, window_seconds=21600, overlap_seconds=600,
+                 backfill_floor="-30d", now=now)

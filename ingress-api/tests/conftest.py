@@ -1,4 +1,5 @@
 import hashlib, textwrap, pytest
+import httpx
 from fastapi.testclient import TestClient
 from app.main import create_app
 
@@ -10,7 +11,12 @@ class FakeInflux:
         self.hw = None
         self.healthy = True
         self.fail_write = False
+        self.raise_status = None  # set to an int to raise httpx.HTTPStatusError with that status
     def write(self, bucket, lp, gzipped=False):
+        if self.raise_status is not None:
+            req = httpx.Request("POST", "http://influx/api/v2/write")
+            resp = httpx.Response(self.raise_status, request=req)
+            raise httpx.HTTPStatusError("err", request=req, response=resp)
         if self.fail_write:
             raise RuntimeError("influx down")
         self.writes.append((bucket, lp, gzipped))
