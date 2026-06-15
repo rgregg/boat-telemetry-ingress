@@ -1729,7 +1729,7 @@ API + agent, with no data loss and dashboards staying green.
 - Confirm `GET /v1/highwater` (with the boat's key) advances toward "now".
 
 ## 3. Retire the legacy pipeline (only after parity holds)
-- On dibble-server, disable the boat's cron line(s) for the old import script.
+- On the legacy import host, disable the boat's cron line(s) for the old import script.
 - Stop the boat's old export cron (`export_and_sync.sh`).
 - Keep the old scripts in place (disabled) as a fallback for one season.
 
