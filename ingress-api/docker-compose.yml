@@ -1,0 +1,19 @@
+services:
+  ingress-api:
+    build: .
+    container_name: boat-ingress-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - INFLUXDB_URL=${INFLUXDB_URL}
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
+      - INFLUXDB_ORG=${INFLUXDB_ORG:-smart_home}
+      - SOURCES_FILE=/config/sources.yaml
+    volumes:
+      - ./sources.yaml:/config/sources.yaml:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,0 +1,8 @@
+# Copy to sources.yaml (gitignored) and fill in real values.
+# key_sha256 = sha256 hex of the API key you give that source:
+#   printf '%s' 'THE-API-KEY' | sha256sum
+sources:
+  site-a:
+    bucket: "<bucket-for-site-a>"
+    tags: { source: "<tag-value>" }
+    key_sha256: "<sha256-hex-of-api-key>"
