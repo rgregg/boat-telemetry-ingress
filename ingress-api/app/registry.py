@@ -20,20 +20,27 @@ class SourceRegistry:
             seen.add(s.key_sha256)
 
     def authenticate(self, api_key: str | None) -> Source | None:
-        if not api_key:
+        if not isinstance(api_key, str) or not api_key:
             return None
         digest = hashlib.sha256(api_key.encode()).hexdigest()
+        result = None
         for s in self._sources:
             if hmac.compare_digest(digest, s.key_sha256):
-                return s
-        return None
+                result = s
+        return result
 
 def load_registry(path: str) -> SourceRegistry:
     with open(path) as f:
         data = yaml.safe_load(f) or {}
-    sources = [
-        Source(id=sid, bucket=cfg["bucket"],
-               tags=cfg.get("tags") or {}, key_sha256=cfg["key_sha256"])
-        for sid, cfg in (data.get("sources") or {}).items()
-    ]
+    sources = []
+    for sid, cfg in (data.get("sources") or {}).items():
+        try:
+            sources.append(Source(
+                id=sid,
+                bucket=cfg["bucket"],
+                tags=dict(cfg.get("tags") or {}),
+                key_sha256=cfg["key_sha256"],
+            ))
+        except KeyError as exc:
+            raise ValueError(f"source '{sid}' is missing required field {exc}") from exc
     return SourceRegistry(sources)

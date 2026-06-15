@@ -44,3 +44,7 @@ def test_load_registry_rejects_duplicate_key(tmp_path):
     """))
     with pytest.raises(ValueError, match="duplicate"):
         load_registry(str(p))
+
+def test_authenticate_unregistered_but_hashlike_key_returns_none(reg):
+    # A plausible 64-hex-char key that simply isn't registered (realistic rejection path)
+    assert reg.authenticate("0" * 64) is None
