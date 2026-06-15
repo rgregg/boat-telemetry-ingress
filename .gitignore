@@ -1,0 +1,24 @@
+# Secrets & local config — NEVER commit (public repo)
+.env
+*.env
+!.env.example
+sources.yaml
+!sources.example.yaml
+*.key
+*token*
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
