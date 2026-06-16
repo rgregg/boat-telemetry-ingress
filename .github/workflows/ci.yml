@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: unit (${{ matrix.component }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [ingress-api, sync-agent]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ${{ matrix.component }}/requirements.txt
+      - name: Install dependencies
+        working-directory: ${{ matrix.component }}
+        run: pip install -r requirements.txt
+      - name: Run unit tests
+        working-directory: ${{ matrix.component }}
+        run: python -m pytest -v
+
+  e2e:
+    name: end-to-end (docker)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: tests/e2e/requirements.txt
+      - name: Install e2e dependencies
+        run: pip install -r tests/e2e/requirements.txt
+      - name: Run end-to-end test (boots 2 InfluxDBs + API + agent)
+        run: python -m pytest tests/e2e/test_e2e.py -v
+
+  build-and-push:
+    name: build & push (${{ matrix.name }})
+    needs: [unit-tests, e2e]
+    # Only publish from branch/tag pushes — never from pull requests.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ingress-api
+            context: ./ingress-api
+            image: ghcr.io/rgregg/boat-telemetry-ingress/ingress-api
+          - name: sync-agent
+            context: ./sync-agent
+            image: ghcr.io/rgregg/boat-telemetry-ingress/sync-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Derive image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ matrix.image }}
+          tags: |
+            type=sha,format=short
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+      - name: Build and push (linux/amd64, linux/arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
