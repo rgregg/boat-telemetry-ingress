@@ -1,4 +1,15 @@
+import pytest
 from agent.csvlp import annotated_csv_to_lp
+
+def test_missing_datatype_annotation_raises():
+    # Header + data row but NO #datatype annotation → cannot type fields → must raise
+    # loudly rather than silently emitting bare (invalid) values for string/bool fields.
+    csv = (
+        ",result,table,_start,_stop,_time,_value,_field,_measurement\r\n"
+        ",_result,0,,,2026-06-14T18:40:00Z,POWER_ON,value,m\r\n"
+    )
+    with pytest.raises(ValueError, match="datatype"):
+        annotated_csv_to_lp(csv)
 
 def test_double_field_with_tag():
     csv = (

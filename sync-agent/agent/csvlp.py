@@ -58,7 +58,11 @@ def annotated_csv_to_lp(csv_text: str) -> str:
             for col in header
             if col not in _RESERVED and rec.get(col)
         )
-        vtype = datatypes[header.index("_value")] if datatypes else "double"
+        if not datatypes:
+            raise ValueError(
+                "annotated CSV has data rows but no #datatype annotation; the query "
+                "must request the datatype annotation or field values cannot be typed")
+        vtype = datatypes[header.index("_value")]
         value = _fmt_value(rec["_value"], vtype)
         ns = _to_ns(rec["_time"])
         lines.append(f"{meas}{tags} {_esc_tag(rec['_field'])}={value} {ns}")
